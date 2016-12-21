@@ -1,0 +1,34 @@
+﻿<?xml version="1.0"?>
+<Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <DroneBehavior xsi:type="MyObjectBuilder_DroneBehaviorDefinition">
+    <Id>
+      <TypeId>DroneBehaviorDefinition</TypeId>
+      <SubtypeId>Territories_Drone</SubtypeId>
+    </Id>
+    <StrafeWidth>15</StrafeWidth>
+    <StrafeHeight>15</StrafeHeight>
+    <StrafeDepth>15</StrafeDepth>
+    <MinStrafeDistance>4</MinStrafeDistance>
+
+    <AvoidCollisions>true</AvoidCollisions>
+    <RotateToPlayer>true</RotateToPlayer>
+    <UseStaticWeaponry>true</UseStaticWeaponry>
+    <UseTools>true</UseTools>
+    <UseRammingBehavior>false</UseRammingBehavior>
+    <AlternativeBehavior></AlternativeBehavior>
+
+    <SpeedLimit>100</SpeedLimit>
+    <PlayerYAxisOffset>0.9</PlayerYAxisOffset>
+    <TargetDistance>800</TargetDistance>
+    <MaxManeuverDistance>300</MaxManeuverDistance>
+    <StaticWeaponryUsage>400</StaticWeaponryUsage>
+    <ToolsUsage>8</ToolsUsage>
+    <RammingBehaviorDistance>75</RammingBehaviorDistance>
+
+    <WaypointDelayMsMin>2500</WaypointDelayMsMin>
+    <WaypointDelayMsMax>5000</WaypointDelayMsMax>
+    <WaypointMaxTime>15000</WaypointMaxTime>
+    <WaypointThresholdDistance>0.75</WaypointThresholdDistance>
+    <LostTimeMs>900000</LostTimeMs>
+  </DroneBehavior>
+</Definitions>
