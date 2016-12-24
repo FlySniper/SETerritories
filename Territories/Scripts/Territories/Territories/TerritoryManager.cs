@@ -54,7 +54,7 @@ namespace Territories
                     Mappings[player.IdentityId] = Iterritory;
                     Mappings[player.IdentityId].addPlayer(player.IdentityId);
                 }
-                PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + player.DisplayName + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
+                PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + Mappings[player.IdentityId].getOwnerName() + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
                 Locations.Add(new Vector3I(adjusted),Iterritory);
                 return;
             }
@@ -80,7 +80,7 @@ namespace Territories
                         Mappings[player.IdentityId].removePlayer(player.IdentityId);
                         Mappings[player.IdentityId] = n;
                         Mappings[player.IdentityId].addPlayer(player.IdentityId);
-                        PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + player.DisplayName + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
+                        PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + Mappings[player.IdentityId].getOwnerName() + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
                         return;
                     }
                 }
@@ -98,7 +98,7 @@ namespace Territories
                         Mappings[player.IdentityId].removePlayer(player.IdentityId);
                         Mappings[player.IdentityId] = Locations[new Vector3I(adjusted2)];
                         Mappings[player.IdentityId].addPlayer(player.IdentityId);
-                        PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + player.DisplayName + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
+                        PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + Mappings[player.IdentityId].getOwnerName() + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
                     }
                 }
                 else
@@ -109,7 +109,7 @@ namespace Territories
                     Mappings[player.IdentityId].removePlayer(player.IdentityId);
                     Mappings[player.IdentityId] = Iterritory;
                     Mappings[player.IdentityId].addPlayer(player.IdentityId);
-                    PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + player.DisplayName + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
+                    PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + Mappings[player.IdentityId].getOwnerName() + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
                 }
             }
         }

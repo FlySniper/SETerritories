@@ -81,8 +81,8 @@ namespace Territories
             for(int j = 0; j<Entities.Length; j+=2)
             {
                 string TLstring = Entities[j];
-                var terrData = Entities[j+1].Split(new string[] { "@@" }, StringSplitOptions.None);
-                var tmp = TLstring.Split(new string[] { "@@" }, StringSplitOptions.None);
+                var terrData = Entities[j+1].Split(new string[] { "@@" }, StringSplitOptions.RemoveEmptyEntries);
+                var tmp = TLstring.Split(new string[] { "@@" }, StringSplitOptions.RemoveEmptyEntries);
                 for(int i = 0; i<tmp.Length; i+=2)
                 {
                     string IDstring = tmp[i];
@@ -126,7 +126,7 @@ namespace Territories
                 foreach(long ID in tl)
                 {
                     ulong dTTL = tl.TTL - TrashCleaner.itterations;
-                    EntityString += ID + "@@" + (tl.TTL > TrashCleaner.itterations ? dTTL:0);
+                    EntityString += ID + "@@" + (tl.TTL > TrashCleaner.itterations ? dTTL:0)+"@@";
                 }
                 EntityString += "^@|"+tl.terr.Center+"@@"+((int)tl.terr.difficulty)+"@@"+tl.terr.owner+"@@"+tl.terr.health+"@@"+tl.terr.grids+"^@|";
             }

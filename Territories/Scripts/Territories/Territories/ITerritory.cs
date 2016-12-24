@@ -28,5 +28,7 @@ namespace Territories
         public abstract bool SpawnGrid(string prefabName);
 
         public abstract void OnHealthZero();
+
+        public abstract string getOwnerName();
     }
 }

@@ -275,11 +275,25 @@ namespace Territories
                 owner = MyVisualScriptLogicProvider.GetPirateId();
                 return;
             }
+            owner = player.IdentityId;
             foreach (long id in Players)
             {
                 var steamid = MyAPIGateway.Players.TryGetSteamId(id);
                 PlayerMoveTracker.SendMessageToClient("Territory: "+new Vector3I(Center)+"\nNew Owner: "+ player.DisplayName+"\nDifficulty: "+difficulty,steamid);
             }
+        }
+
+        public override string getOwnerName()
+        {
+            List<IMyPlayer> players = new List<IMyPlayer>();
+            MyAPIGateway.Players.GetPlayers(players,(p) => p.IdentityId == owner);
+            if (players.Count <= 0 || players[0] == null)
+            {
+                owner = MyVisualScriptLogicProvider.GetPirateId();
+                return "Space Pirates";
+            }
+            var player = players[0];
+            return player.DisplayName;
         }
 
         public bool hasEnemies()
@@ -319,6 +333,11 @@ namespace Territories
         public override void addPlayer(long id)
         {
             
+        }
+
+        public override string getOwnerName()
+        {
+            return "Nobody";
         }
 
         public override void OnHealthZero()
