@@ -54,10 +54,11 @@ namespace Territories
                     Mappings[player.IdentityId] = Iterritory;
                     Mappings[player.IdentityId].addPlayer(player.IdentityId);
                 }
-                PlayerMoveTracker.SendMessageToClient("You are now in a Territory with difficulty of " + Mappings[player.IdentityId].difficulty.ToString(), player.SteamUserId);
+                PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + player.DisplayName + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
                 Locations.Add(new Vector3I(adjusted),Iterritory);
+                return;
             }
-            string[] prefabs = { "DefenderCorvette", "ScarabMaw", "DuelEye","Eivogel" };
+            string[] prefabs = {"ScarabMaw", "DuelEye","Eivogel" };
             Random r = new Random();
             Iterritory.SpawnGrid(prefabs[r.Next(prefabs.Length)]);
             double distance = (player.GetPosition() - Iterritory.Center).LengthSquared();
@@ -67,7 +68,7 @@ namespace Territories
                 addNeighbors(Iterritory);
             }
             List<ITerritory> neighbors = new List<ITerritory>() {Iterritory.Forward, Iterritory.Backward, Iterritory.Left, Iterritory.Right, Iterritory.Up, Iterritory.Down};
-            if (distance <= 200000d)
+            if (distance <= 40000000000d)
             {
                 foreach (ITerritory n in neighbors)
                 {
@@ -76,10 +77,10 @@ namespace Territories
                     var neighborDistance = (player.GetPosition() - n.Center).LengthSquared();
                     if (neighborDistance < distance)
                     {
-                        Iterritory.removePlayer(player.IdentityId);
+                        Mappings[player.IdentityId].removePlayer(player.IdentityId);
                         Mappings[player.IdentityId] = n;
                         Mappings[player.IdentityId].addPlayer(player.IdentityId);
-                        PlayerMoveTracker.SendMessageToClient("You are now in a Territory with difficulty of " + Mappings[player.IdentityId].difficulty.ToString(), player.SteamUserId);
+                        PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + player.DisplayName + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
                         return;
                     }
                 }
@@ -94,11 +95,21 @@ namespace Territories
                 {
                     if (Locations[new Vector3I(adjusted2)] != Mappings[player.IdentityId])
                     {
-                        Iterritory.removePlayer(player.IdentityId);
+                        Mappings[player.IdentityId].removePlayer(player.IdentityId);
                         Mappings[player.IdentityId] = Locations[new Vector3I(adjusted2)];
                         Mappings[player.IdentityId].addPlayer(player.IdentityId);
-                        PlayerMoveTracker.SendMessageToClient("You are now in a Territory with difficulty of " + Mappings[player.IdentityId].difficulty.ToString(), player.SteamUserId);
+                        PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + player.DisplayName + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
                     }
+                }
+                else
+                {
+                    Iterritory = addTerritory(adjusted2);
+                    if (Iterritory == null)
+                        return;
+                    Mappings[player.IdentityId].removePlayer(player.IdentityId);
+                    Mappings[player.IdentityId] = Iterritory;
+                    Mappings[player.IdentityId].addPlayer(player.IdentityId);
+                    PlayerMoveTracker.SendMessageToClient("Territory: " + new Vector3I(Mappings[player.IdentityId].Center) + "\nOwner: " + player.DisplayName + "\nDifficulty: " + Mappings[player.IdentityId].difficulty, player.SteamUserId);
                 }
             }
         }

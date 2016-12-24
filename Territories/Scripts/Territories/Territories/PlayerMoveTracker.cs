@@ -25,7 +25,7 @@ namespace Territories
     {
         private bool firstcall = true;
         public static ulong CleanTimer = 72000;
-        static ulong itteration = 0;
+        //static ulong itteration = 0;
         public override void UpdateBeforeSimulation()
         {
             

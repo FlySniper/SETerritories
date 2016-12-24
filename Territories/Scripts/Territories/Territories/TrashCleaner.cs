@@ -35,25 +35,19 @@ namespace Territories
             {
                 if(tl.TTL <= itterations)
                 {
-                    int count = 0;
                     foreach(long ID in tl)
                     {
-                        ++count;
                         if (!MyAPIGateway.Entities.EntityExists(ID))
                         {
-                            count = 2;
                             continue;
                         }
                         var grid = MyAPIGateway.Entities.GetEntityById(ID);
                         if(grid == null)
                         {
-                            count = 2;
                             continue;
                         }
                         grid.Delete();
                     }
-                    if (count >= 2)
-                        --tl.terr.health;
                     --tl.terr.grids;
                     --TerritoryManager.totalGrids;
                 }
