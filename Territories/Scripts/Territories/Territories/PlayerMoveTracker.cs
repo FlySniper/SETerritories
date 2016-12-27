@@ -38,12 +38,17 @@ namespace Territories
             {
                 if (firstcall)
                 {
+                    MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
+                    MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
                     AddMessageHandler();
                 }
                 return;
             }
             if(firstcall)
             {
+                MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
+                MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
+                MyAPIGateway.Multiplayer.RegisterMessageHandler(6060, HandleServerData);
                 TrashCleaner.Load();
                 firstcall = false;
                 return;
@@ -61,6 +66,30 @@ namespace Territories
             }
             TrashCleaner.exec();
         }
+
+        private void Utilities_MessageEntered(string messageText, ref bool sendToOthers)
+        {
+            var text = messageText.ToLower();
+            if(text.StartsWith("/t ") || text.StartsWith("/terr ") || text.StartsWith("/territory "))
+            {
+                sendToOthers = false;
+                var splt = text.Split(new char[] { ' '},StringSplitOptions.RemoveEmptyEntries);
+                var len = splt.Length;
+                if(len == 1)
+                {
+                    var lbytes = BitConverter.GetBytes(MyAPIGateway.Session.Player.SteamUserId);
+                    var bytes = new byte[] {1,lbytes[0], lbytes[1], lbytes[2], lbytes[3], lbytes[4], lbytes[5], lbytes[6], lbytes[7] };
+                    MyAPIGateway.Multiplayer.SendMessageToServer(6060,bytes);
+                }
+                if(len ==2 && splt[1].Equals("show"))
+                {
+                    var lbytes = BitConverter.GetBytes(MyAPIGateway.Session.Player.SteamUserId);
+                    var bytes = new byte[] { 2, lbytes[0], lbytes[1], lbytes[2], lbytes[3], lbytes[4], lbytes[5], lbytes[6], lbytes[7] };
+                    MyAPIGateway.Multiplayer.SendMessageToServer(6060, bytes);
+                }
+            }
+        }
+
         public override void SaveData()
         {
             base.SaveData();
@@ -73,6 +102,7 @@ namespace Territories
 
         protected override void UnloadData()
         {
+            MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
             RemoveMessageHandler();
         }
 
@@ -96,9 +126,30 @@ namespace Territories
             MyAPIGateway.Utilities.ShowNotification(message, 6000);
 
         }
+
+        public void HandleServerData(byte[] data)
+        {
+
+            if(data[0]==1)
+            {
+                ulong id = BitConverter.ToUInt64(data, 1);
+                SendMessageToClient("Territories Help\n/t show - Shows Territory Information",id);
+            }
+            if(data[0] == 2)
+            {
+                ulong id = BitConverter.ToUInt64(data, 1);
+                long IdId = MyAPIGateway.Players.TryGetIdentityId(id);
+                if(TerritoryManager.Mappings.ContainsKey(IdId))
+                {
+                    var terr = TerritoryManager.Mappings[IdId];
+                    SendMessageToClient("Territory: " + new Vector3I(terr.Center) + "\nOwner: " + terr.getOwnerName() + "\nDifficulty: " + terr.difficulty, id);
+                }
+            }
+
+        }
         public static void SendMessageToClient(string message, ulong steamid)
         {
-            if (steamid == MyAPIGateway.Session.LocalHumanPlayer.SteamUserId)
+            if (MyAPIGateway.Multiplayer.IsServer)
             {
                 MyAPIGateway.Utilities.ShowNotification(message, 6000);
                 return;

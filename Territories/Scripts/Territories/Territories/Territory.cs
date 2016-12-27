@@ -79,15 +79,15 @@ namespace Territories
                     break;
                 case (AREADIFFICULTY.EASY):
                     maxGrids = 4;
-                    maxBlocks = 500;
+                    maxBlocks = 300;
                     break;
                 case (AREADIFFICULTY.MEDIUM):
                     maxGrids = 7;
-                    maxBlocks = 2000;
+                    maxBlocks = 600;
                     break;
                 case (AREADIFFICULTY.HARD):
                     maxGrids = 10;
-                    maxBlocks = 5000;
+                    maxBlocks = 1200;
                     break;
 
             }
@@ -138,12 +138,13 @@ namespace Territories
             //Prefab setup
             var tempList = new List<MyObjectBuilder_EntityBase>();
             // We SHOULD NOT make any changes directly to the prefab, we need to make a Value copy using Clone(), and modify that instead.
+
+            HashSet<IMyEntity> Planets = new HashSet<IMyEntity>();
+            MyAPIGateway.Entities.GetEntities(Planets, e => e is MyPlanet);
             foreach (var g in prefab.CubeGrids)
             {
                 var spawnPos = GenerateWaypoint();
 
-                HashSet<IMyEntity> Planets = new HashSet<IMyEntity>();
-                MyAPIGateway.Entities.GetEntities(Planets, e => e is MyPlanet);
                 foreach (IMyEntity e in Planets)
                 {
                     MyPlanet p = (MyPlanet)e;
@@ -191,9 +192,8 @@ namespace Territories
                     Random r = new Random();
                     var rand = r.Next(int.MinValue, int.MaxValue);
                     localGrid.Name = "Drone #" + rand;
-                    MyAPIGateway.Entities.SetEntityName(localGrid);
                     MyVisualScriptLogicProvider.SetDroneBehaviourFull("Drone #" + rand,maxPlayerDistance:75000,assignToPirates:false,presetName: "C_LongRangeGatlingDrone");
-
+                    
                     ++droneCount;
                     entities.Add(localGrid);
                 }
@@ -304,8 +304,14 @@ namespace Territories
             {
                 return Players.Count > 1;
             }
-            foreach(long id in Players)
+            for (int i = 0; i < Players.Count; ++i)
             {
+                long id = Players.ElementAt(i);
+                if (MyVisualScriptLogicProvider.IsPlayerDead(id))
+                {
+                    i = 0;
+                    Players.Remove(id);
+                }
                 var faction2 = MyAPIGateway.Session.Factions.TryGetPlayerFaction(id);
                 if(faction2 == null)
                 {
