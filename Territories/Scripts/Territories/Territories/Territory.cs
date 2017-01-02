@@ -29,7 +29,6 @@ namespace Territories
         public int maxGrids = 10;
         public int maxBlocks = 5000;
         public int grids = 0;
-        public int health = 5;
         public long owner = MyVisualScriptLogicProvider.GetPirateId();
         public static int radius = 100; // This is in Km
         static long droneCount = 0;
@@ -125,7 +124,6 @@ namespace Territories
                 OnHealthZero();
                 return false;
             }
-
             //HashSet<IMyEntity> Planets = new HashSet<IMyEntity>();
             //MyAPIGateway.Entities.GetEntities(Planets, e => e is MyPlanet);
             var prefab = MyDefinitionManager.Static.GetPrefabDefinition(prefabName);
@@ -182,18 +180,19 @@ namespace Territories
                     localGrid.ChangeGridOwnership(owner, MyOwnershipShareModeEnum.Faction);
                     if (localGrid.BlocksCount > maxBlocks)
                     {
-                        MyAPIGateway.Multiplayer.SendEntitiesCreated(tempList);
+                        //MyAPIGateway.Multiplayer.SendEntitiesCreated(tempList);
+                        localGrid.Delete();
                         return false;
                     }
-                    localGrid.AddToGamePruningStructure();
+                    //localGrid.AddToGamePruningStructure();
                     tl.AddLast(localGrid.EntityId);
                     localGrid.OnGridSplit += (a1, a2) => OnGridSplit(a1, a2, tl);
                     localGrid.OnGridSplit += LocalGrid_OnBlockIntegrityChanged;
                     Random r = new Random();
                     var rand = r.Next(int.MinValue, int.MaxValue);
-                    localGrid.Name = "Drone #" + rand;
-                    MyVisualScriptLogicProvider.SetDroneBehaviourFull("Drone #" + rand,maxPlayerDistance:75000,assignToPirates:false,presetName: "C_LongRangeGatlingDrone");
-                    
+                    localGrid.Name = "Drone #" + localGrid.EntityId;
+                    MyAPIGateway.Entities.SetEntityName(localGrid,false);
+                    MyVisualScriptLogicProvider.SetDroneBehaviourFull("Drone #" + localGrid.EntityId, maxPlayerDistance: 75000, assignToPirates: false, presetName: "Territories_Drone", activate: true);
                     ++droneCount;
                     entities.Add(localGrid);
                 }
@@ -238,7 +237,7 @@ namespace Territories
             switch (difficulty)
             {
                 case (AREADIFFICULTY.NONE):
-                    health = 3;
+                    health = 1;
                     break;
                 case (AREADIFFICULTY.EASY):
                     health = 3;

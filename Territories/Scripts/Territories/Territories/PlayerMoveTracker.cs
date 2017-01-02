@@ -40,6 +40,7 @@ namespace Territories
                 {
                     MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
                     MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
+                    firstcall = false;
                     AddMessageHandler();
                 }
                 return;
@@ -70,7 +71,7 @@ namespace Territories
         private void Utilities_MessageEntered(string messageText, ref bool sendToOthers)
         {
             var text = messageText.ToLower();
-            if(text.StartsWith("/t ") || text.StartsWith("/terr ") || text.StartsWith("/territory "))
+            if(text.StartsWith("/t ") || text.StartsWith("/terr ") || text.StartsWith("/territory ")|| text.Equals("/t") || text.Equals("/terr") || text.Equals("/territory"))
             {
                 sendToOthers = false;
                 var splt = text.Split(new char[] { ' '},StringSplitOptions.RemoveEmptyEntries);
@@ -103,6 +104,7 @@ namespace Territories
         protected override void UnloadData()
         {
             MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
+            MyAPIGateway.Multiplayer.UnregisterMessageHandler(6060, HandleServerData);
             RemoveMessageHandler();
         }
 
@@ -142,14 +144,14 @@ namespace Territories
                 if(TerritoryManager.Mappings.ContainsKey(IdId))
                 {
                     var terr = TerritoryManager.Mappings[IdId];
-                    SendMessageToClient("Territory: " + new Vector3I(terr.Center) + "\nOwner: " + terr.getOwnerName() + "\nDifficulty: " + terr.difficulty, id);
+                    SendMessageToClient("Territory: " + new Vector3I(terr.Center) + "\nOwner: " + terr.getOwnerName() + "\nDifficulty: " + terr.difficulty+"\nHealth: "+terr.health, id);
                 }
             }
 
         }
         public static void SendMessageToClient(string message, ulong steamid)
         {
-            if (MyAPIGateway.Multiplayer.IsServer)
+            if (MyAPIGateway.Multiplayer.ServerId == steamid)
             {
                 MyAPIGateway.Utilities.ShowNotification(message, 6000);
                 return;

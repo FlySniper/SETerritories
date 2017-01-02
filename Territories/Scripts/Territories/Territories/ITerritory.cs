@@ -18,6 +18,7 @@ namespace Territories
         public ITerritory Down = null;
         public ITerritory Left = null;
         public ITerritory Right = null;
+        public int health = 1;
 
         public Territory.AREADIFFICULTY difficulty;
 
