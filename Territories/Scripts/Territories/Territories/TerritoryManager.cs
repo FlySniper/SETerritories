@@ -27,6 +27,11 @@ namespace Territories
         public static int totalMaxGrids = 30;
         
        
+        public static void ClearTerritories()
+        {
+            Mappings = new Dictionary<long, ITerritory>();
+            Locations = new Dictionary<Vector3I, ITerritory>();
+        }
 
         public static void checkPlayer(IMyPlayer player)
         {
@@ -58,9 +63,7 @@ namespace Territories
                 Locations.Add(new Vector3I(adjusted),Iterritory);
                 return;
             }
-            string[] prefabs = {"ScarabMaw", "DuelEye","Eivogel" };
-            Random r = new Random();
-            Iterritory.SpawnGrid(prefabs[r.Next(prefabs.Length)]);
+            Iterritory.SpawnGrid();
             double distance = (player.GetPosition() - Iterritory.Center).LengthSquared();
             if((Iterritory.Forward == null || Iterritory.Backward == null || Iterritory.Left == null || Iterritory.Right == null || Iterritory.Up == null || Iterritory.Down == null))
             {

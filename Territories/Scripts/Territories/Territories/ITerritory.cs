@@ -26,7 +26,7 @@ namespace Territories
 
         public abstract void removePlayer(long id);
 
-        public abstract bool SpawnGrid(string prefabName);
+        public abstract bool SpawnGrid();
 
         public abstract void OnHealthZero();
 

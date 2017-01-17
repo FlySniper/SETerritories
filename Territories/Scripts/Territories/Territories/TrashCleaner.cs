@@ -35,6 +35,7 @@ namespace Territories
             {
                 if(tl.TTL <= itterations)
                 {
+                    bool didDelete = true;
                     foreach(long ID in tl)
                     {
                         if (!MyAPIGateway.Entities.EntityExists(ID))
@@ -46,10 +47,24 @@ namespace Territories
                         {
                             continue;
                         }
-                        grid.Delete();
+
+                        int targets = MyVisualScriptLogicProvider.DroneGetTargetsCount("Drone #" + grid.EntityId);
+                        if (targets > 0 && !tl.didAdd)
+                        {
+                            tl.TTL += PlayerMoveTracker.AdditionalTimer;
+                            tl.didAdd = true;
+                            didDelete = false;
+                        }
+                        else
+                        {
+                            grid.Delete();
+                        }
                     }
-                    --tl.terr.grids;
-                    --TerritoryManager.totalGrids;
+                    if (didDelete)
+                    {
+                        --tl.terr.grids;
+                        --TerritoryManager.totalGrids;
+                    }
                 }
                 else
                 {

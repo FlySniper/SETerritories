@@ -15,6 +15,11 @@ using VRage.Game.Components;
 using VRage.Game;
 using VRage.Game.ModAPI;
 using System.IO;
+using Sandbox.Common.ObjectBuilders;
+using SpaceEngineers.Game;
+using SpaceEngineers.Game.ModAPI;
+using Sandbox.Game.Entities.Inventory;
+using VRage.Game.Entity;
 
 namespace Territories
 {
@@ -102,7 +107,7 @@ namespace Territories
             Players.Remove(id);
         }
 
-        public override bool SpawnGrid(string prefabName)
+        public override bool SpawnGrid()
         {
             if(gridCalls < 100)
             {
@@ -124,8 +129,316 @@ namespace Territories
                 OnHealthZero();
                 return false;
             }
+            if(difficulty == AREADIFFICULTY.NONE)
+            {
+                return false;
+            }
+            string[] prefabs;
+            string prefabName = "";
+            if(difficulty == AREADIFFICULTY.EASY)
+            {
+                prefabs = new string[]{ "ScarabMaw" };
+            }
+            else if (difficulty == AREADIFFICULTY.MEDIUM)
+            {
+                prefabs = new string[] { "DuelEye", "Eivogel" };
+            }
+            else
+            {
+                prefabs = new string[] { "IMDC_Atlas-class_Frigate_MkI" };
+            }
+            Random myR = new Random();
+            prefabName = prefabs[myR.Next(0,prefabs.Length)];
             //HashSet<IMyEntity> Planets = new HashSet<IMyEntity>();
             //MyAPIGateway.Entities.GetEntities(Planets, e => e is MyPlanet);
+            if (difficulty == AREADIFFICULTY.EASY && GridCopier.easyGrids.Count >= 1)
+            {
+                Random Rand = new Random();
+                var builder = GridCopier.easyGrids[Rand.Next(0, GridCopier.easyGrids.Count)];
+
+                var spawnPos = GenerateWaypoint();
+                var Forward = (spawnPos - Center);
+                Forward.Normalize();
+                var Up = Vector3D.Zero;
+                Forward.CalculatePerpendicularVector(out Up);
+                builder.PositionAndOrientation = new MyPositionAndOrientation(spawnPos, Forward, Up);
+                var CubeBlocks = builder.CubeBlocks;
+                var Reactors = CubeBlocks.FindAll((b) => b is MyObjectBuilder_Reactor);
+                var Turrets = CubeBlocks.FindAll((b) => b is MyObjectBuilder_ConveyorTurretBase);
+                var Remotes = CubeBlocks.FindAll((b) => b is MyObjectBuilder_RemoteControl);
+                if (Reactors.Count == 0 || Turrets.Count == 0 || Remotes.Count == 0)
+                {
+                    GridCopier.easyGrids.Remove(builder);
+                    return false;
+                }
+
+                MyAPIGateway.Entities.RemapObjectBuilder(builder);
+                var entity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(builder);
+                TrashList trl = new TrashList(TrashCleaner.itterations + PlayerMoveTracker.CleanTimer, this);
+                if (entity is MyCubeGrid)
+                {
+
+                    var localGrid = (MyCubeGrid)entity;
+                    localGrid.ChangeGridOwnership(owner, MyOwnershipShareModeEnum.Faction);
+                    localGrid.AddToGamePruningStructure();
+                    trl.AddLast(localGrid.EntityId);
+                    localGrid.OnGridSplit += (a1, a2) => OnGridSplit(a1, a2, trl);
+                    localGrid.OnGridSplit += LocalGrid_OnBlockIntegrityChanged;
+                    Random r = new Random();
+                    var rand = r.Next(int.MinValue, int.MaxValue);
+                    localGrid.Name = "Drone #" + localGrid.EntityId;
+                    MyAPIGateway.Entities.SetEntityName(localGrid, false);
+                    MyVisualScriptLogicProvider.SetDroneBehaviourFull("Drone #" + localGrid.EntityId, maxPlayerDistance: 75000, assignToPirates: false, presetName: "Territories_Drone", activate: true);
+                    ++droneCount;
+                    TrashCleaner.Add(trl);
+                    MyAPIGateway.Multiplayer.SendEntitiesCreated(new List<MyObjectBuilder_EntityBase>() { builder });
+                    var IGrid = (IMyCubeGrid)entity;
+                    List<IMySlimBlock> turrets = new List<IMySlimBlock>();
+                    IGrid.GetBlocks(turrets, (b) => b.FatBlock is IMyLargeTurretBase);
+                    foreach (var block in turrets)
+                    {
+                        if (block.FatBlock is IMyLargeGatlingTurret)
+                        {
+                            var tmp = (IMyLargeGatlingTurret)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            inv.AddItems(3, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("NATO_25x184mm"));
+                        }
+                        else if (block.FatBlock is IMyLargeMissileTurret)
+                        {
+                            var tmp = (IMyLargeMissileTurret)block.FatBlock;
+                            tmp.RequestEnable(true);
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            inv.AddItems(2, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("Missile200mm"));
+                        }
+                    }
+                    List<IMySlimBlock> reactors = new List<IMySlimBlock>();
+                    IGrid.GetBlocks(reactors, (b) => b.FatBlock is IMyReactor);
+                    foreach (var block in reactors)
+                    {
+                        if (block.FatBlock is IMyReactor)
+                        {
+                            var tmp = (IMyReactor)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            inv.AddItems(10, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_Ingot>("Uranium"));
+                        }
+                    }
+                    List<IMySlimBlock> containers = new List<IMySlimBlock>();
+                    IGrid.GetBlocks(containers, (b) => b.FatBlock is IMyCargoContainer);
+                    foreach (var block in containers)
+                    {
+                        if (block.FatBlock is IMyCargoContainer)
+                        {
+                            var tmp = (IMyCargoContainer)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            //inv.AddItems(20, new MyObjectBuilder_InventoryItem() { Amount = 20, PhysicalContent = MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("Missile200mm") });
+                            inv.AddItems(20, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("Missile200mm"));
+                            inv.AddItems(10, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("NATO_25x184mm"));
+                            //inv.AddItems(10, new MyObjectBuilder_InventoryItem() { Amount = 10, PhysicalContent = MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("NATO_25x184mm") });
+                            //tmp.Components.Add(inv);
+                        }
+                    }
+                    ++grids;
+                    ++TerritoryManager.totalGrids;
+                    return true;
+                }
+                return false;
+            }
+
+            if (difficulty == AREADIFFICULTY.MEDIUM && GridCopier.mediumGrids.Count >= 1)
+            {
+                Random Rand = new Random();
+                var builder = GridCopier.mediumGrids[Rand.Next(0, GridCopier.mediumGrids.Count)];
+
+                var spawnPos = GenerateWaypoint();
+                var Forward = (spawnPos - Center);
+                Forward.Normalize();
+                var Up = Vector3D.Zero;
+                Forward.CalculatePerpendicularVector(out Up);
+                builder.PositionAndOrientation = new MyPositionAndOrientation(spawnPos, Forward, Up);
+                var CubeBlocks = builder.CubeBlocks;
+                var Reactors = CubeBlocks.FindAll((b) => b is MyObjectBuilder_Reactor);
+                var Turrets = CubeBlocks.FindAll((b) => b is MyObjectBuilder_ConveyorTurretBase);
+                var Remotes = CubeBlocks.FindAll((b) => b is MyObjectBuilder_RemoteControl);
+                if (Reactors.Count == 0 || Turrets.Count == 0 || Remotes.Count == 0)
+                {
+                    GridCopier.mediumGrids.Remove(builder);
+                    return false;
+                }
+
+                MyAPIGateway.Entities.RemapObjectBuilder(builder);
+                var entity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(builder);
+                TrashList trl = new TrashList(TrashCleaner.itterations + PlayerMoveTracker.CleanTimer, this);
+                if (entity is MyCubeGrid)
+                {
+
+                    var localGrid = (MyCubeGrid)entity;
+                    localGrid.ChangeGridOwnership(owner, MyOwnershipShareModeEnum.Faction);
+                    localGrid.AddToGamePruningStructure();
+                    trl.AddLast(localGrid.EntityId);
+                    localGrid.OnGridSplit += (a1, a2) => OnGridSplit(a1, a2, trl);
+                    localGrid.OnGridSplit += LocalGrid_OnBlockIntegrityChanged;
+                    Random r = new Random();
+                    var rand = r.Next(int.MinValue, int.MaxValue);
+                    localGrid.Name = "Drone #" + localGrid.EntityId;
+                    MyAPIGateway.Entities.SetEntityName(localGrid, false);
+                    MyVisualScriptLogicProvider.SetDroneBehaviourFull("Drone #" + localGrid.EntityId, maxPlayerDistance: 75000, assignToPirates: false, presetName: "Territories_Drone", activate: true);
+                    ++droneCount;
+                    TrashCleaner.Add(trl);
+                    MyAPIGateway.Multiplayer.SendEntitiesCreated(new List<MyObjectBuilder_EntityBase>() { builder });
+                    var IGrid = (IMyCubeGrid)entity;
+                    List<IMySlimBlock> turrets = new List<IMySlimBlock>();
+                    IGrid.GetBlocks(turrets, (b) => b.FatBlock is IMyLargeTurretBase);
+                    foreach (var block in turrets)
+                    {
+                        if (block.FatBlock is IMyLargeGatlingTurret)
+                        {
+                            var tmp = (IMyLargeGatlingTurret)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            inv.AddItems(3, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("NATO_25x184mm"));
+                        }
+                        else if (block.FatBlock is IMyLargeMissileTurret)
+                        {
+                            var tmp = (IMyLargeMissileTurret)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            inv.AddItems(2, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("Missile200mm"));
+                        }
+                    }
+                    List<IMySlimBlock> reactors = new List<IMySlimBlock>();
+                    IGrid.GetBlocks(reactors, (b) => b.FatBlock is IMyReactor);
+                    foreach (var block in reactors)
+                    {
+                        if (block.FatBlock is IMyReactor)
+                        {
+                            var tmp = (IMyReactor)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            inv.AddItems(10, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_Ingot>("Uranium"));
+                        }
+                    }
+                    List<IMySlimBlock> containers = new List<IMySlimBlock>();
+                    IGrid.GetBlocks(containers, (b) => b.FatBlock is IMyCargoContainer);
+                    foreach (var block in containers)
+                    {
+                        if (block.FatBlock is IMyCargoContainer)
+                        {
+                            var tmp = (IMyCargoContainer)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            //inv.AddItems(20, new MyObjectBuilder_InventoryItem() { Amount = 20, PhysicalContent = MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("Missile200mm") });
+                            inv.AddItems(20, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("Missile200mm"));
+                            inv.AddItems(10, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("NATO_25x184mm"));
+                            //inv.AddItems(10, new MyObjectBuilder_InventoryItem() { Amount = 10, PhysicalContent = MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("NATO_25x184mm") });
+                            //tmp.Components.Add(inv);
+                        }
+                    }
+                    ++grids;
+                    ++TerritoryManager.totalGrids;
+                    return true;
+                }
+                return false;
+            }
+
+            if (difficulty == AREADIFFICULTY.HARD && GridCopier.hardGrids.Count >= 1)
+            {
+                Random Rand = new Random();
+                var builder = GridCopier.hardGrids[Rand.Next(0,GridCopier.hardGrids.Count)];
+
+                var spawnPos = GenerateWaypoint();
+                var Forward = (spawnPos - Center);
+                Forward.Normalize();
+                var Up = Vector3D.Zero;
+                Forward.CalculatePerpendicularVector(out Up);
+                builder.PositionAndOrientation = new MyPositionAndOrientation(spawnPos, Forward, Up);
+                var CubeBlocks = builder.CubeBlocks;
+                var Reactors = CubeBlocks.FindAll((b) => b is MyObjectBuilder_Reactor);
+                var Turrets = CubeBlocks.FindAll((b) => b is MyObjectBuilder_ConveyorTurretBase);
+                var Remotes = CubeBlocks.FindAll((b) => b is MyObjectBuilder_RemoteControl);
+                if (Reactors.Count == 0 || Turrets.Count == 0 || Remotes.Count == 0)
+                {
+                    GridCopier.hardGrids.Remove(builder);
+                    return false;
+                }
+
+                MyAPIGateway.Entities.RemapObjectBuilder(builder);
+                var entity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(builder);
+                TrashList trl = new TrashList(TrashCleaner.itterations + PlayerMoveTracker.CleanTimer, this);
+                if (entity is MyCubeGrid)
+                {
+                    
+                    var localGrid = (MyCubeGrid)entity;
+                    localGrid.ChangeGridOwnership(owner, MyOwnershipShareModeEnum.Faction);
+                    localGrid.AddToGamePruningStructure();
+                    trl.AddLast(localGrid.EntityId);
+                    localGrid.OnGridSplit += (a1, a2) => OnGridSplit(a1, a2, trl);
+                    localGrid.OnGridSplit += LocalGrid_OnBlockIntegrityChanged;
+                    Random r = new Random();
+                    var rand = r.Next(int.MinValue, int.MaxValue);
+                    localGrid.Name = "Drone #" + localGrid.EntityId;
+                    MyAPIGateway.Entities.SetEntityName(localGrid, false);
+                    MyVisualScriptLogicProvider.SetDroneBehaviourFull("Drone #" + localGrid.EntityId, maxPlayerDistance: 75000, assignToPirates: false, presetName: "Territories_Drone", activate: true);
+                    ++droneCount;
+                    TrashCleaner.Add(trl);
+                    MyAPIGateway.Multiplayer.SendEntitiesCreated(new List<MyObjectBuilder_EntityBase>() { builder });
+                    var IGrid = (IMyCubeGrid)entity;
+                    List<IMySlimBlock> turrets = new List<IMySlimBlock>();
+                    IGrid.GetBlocks(turrets, (b) => b.FatBlock is IMyLargeTurretBase);
+                    foreach (var block in turrets)
+                    {
+                        if (block.FatBlock is IMyLargeGatlingTurret)
+                        {
+                            var tmp = (IMyLargeGatlingTurret)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            inv.AddItems(3, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("NATO_25x184mm"));
+                        }
+                        else if (block.FatBlock is IMyLargeMissileTurret)
+                        {
+                            var tmp = (IMyLargeMissileTurret)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            inv.AddItems(2, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("Missile200mm"));
+                        }
+                    }
+                    List<IMySlimBlock> reactors = new List<IMySlimBlock>();
+                    IGrid.GetBlocks(reactors, (b) => b.FatBlock is IMyReactor);
+                    foreach (var block in reactors)
+                    {
+                        if (block.FatBlock is IMyReactor)
+                        {
+                            var tmp = (IMyReactor)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            inv.AddItems(10, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_Ingot>("Uranium"));
+                        }
+                    }
+                    List<IMySlimBlock> containers = new List<IMySlimBlock>();
+                    IGrid.GetBlocks(containers, (b) => b.FatBlock is IMyCargoContainer);
+                    foreach (var block in containers)
+                    {
+                        if (block.FatBlock is IMyCargoContainer)
+                        {
+                            var tmp = (IMyCargoContainer)block.FatBlock;
+                            MyInventoryBase inv;
+                            tmp.Components.TryGet(out inv);
+                            //inv.AddItems(20, new MyObjectBuilder_InventoryItem() { Amount = 20, PhysicalContent = MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("Missile200mm") });
+                            inv.AddItems(20, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("Missile200mm"));
+                            inv.AddItems(10, MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("NATO_25x184mm"));
+                            //inv.AddItems(10, new MyObjectBuilder_InventoryItem() { Amount = 10, PhysicalContent = MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_AmmoMagazine>("NATO_25x184mm") });
+                            //tmp.Components.Add(inv);
+                        }
+                    }
+                    ++grids;
+                    ++TerritoryManager.totalGrids;
+                    return true;
+                }
+                return false;
+            }
             var prefab = MyDefinitionManager.Static.GetPrefabDefinition(prefabName);
             if (prefab.CubeGrids == null)
             {
@@ -178,12 +491,6 @@ namespace Territories
                 {
                     var localGrid = (MyCubeGrid)entity;
                     localGrid.ChangeGridOwnership(owner, MyOwnershipShareModeEnum.Faction);
-                    if (localGrid.BlocksCount > maxBlocks)
-                    {
-                        //MyAPIGateway.Multiplayer.SendEntitiesCreated(tempList);
-                        localGrid.Delete();
-                        return false;
-                    }
                     //localGrid.AddToGamePruningStructure();
                     tl.AddLast(localGrid.EntityId);
                     localGrid.OnGridSplit += (a1, a2) => OnGridSplit(a1, a2, tl);
@@ -203,7 +510,6 @@ namespace Territories
             ++TerritoryManager.totalGrids;
             return true;
         }
-
         private void LocalGrid_OnBlockIntegrityChanged(MyCubeGrid arg1, MyCubeGrid arg2)
         {
             if (health > 0)
@@ -355,7 +661,7 @@ namespace Territories
             
         }
 
-        public override bool SpawnGrid(string prefabName)
+        public override bool SpawnGrid()
         {
             return false;
         }

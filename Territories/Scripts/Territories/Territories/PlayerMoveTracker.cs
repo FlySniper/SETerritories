@@ -25,7 +25,8 @@ namespace Territories
     {
         private bool firstcall = true;
         public static ulong CleanTimer = 72000;
-        //static ulong itteration = 0;
+        public static ulong AdditionalTimer = 144000;
+        static ulong itteration = 0;
         public override void UpdateBeforeSimulation()
         {
             
@@ -66,6 +67,11 @@ namespace Territories
                     TerritoryManager.checkPlayer(p);
             }
             TrashCleaner.exec();
+            ++itteration;
+            if(itteration % 1000 == 999)
+            {
+                GridCopier.FindAnalyzeAndAdd();
+            }
         }
 
         private void Utilities_MessageEntered(string messageText, ref bool sendToOthers)
@@ -88,7 +94,14 @@ namespace Territories
                     var bytes = new byte[] { 2, lbytes[0], lbytes[1], lbytes[2], lbytes[3], lbytes[4], lbytes[5], lbytes[6], lbytes[7] };
                     MyAPIGateway.Multiplayer.SendMessageToServer(6060, bytes);
                 }
+                if (len == 2 && splt[1].Equals("clear"))
+                {
+                    var lbytes = BitConverter.GetBytes(MyAPIGateway.Session.Player.SteamUserId);
+                    var bytes = new byte[] { 3, lbytes[0], lbytes[1], lbytes[2], lbytes[3], lbytes[4], lbytes[5], lbytes[6], lbytes[7] };
+                    MyAPIGateway.Multiplayer.SendMessageToServer(6060, bytes);
+                }
             }
+            
         }
 
         public override void SaveData()
@@ -106,6 +119,7 @@ namespace Territories
             MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
             MyAPIGateway.Multiplayer.UnregisterMessageHandler(6060, HandleServerData);
             RemoveMessageHandler();
+            
         }
 
         public void AddMessageHandler()
@@ -145,6 +159,20 @@ namespace Territories
                 {
                     var terr = TerritoryManager.Mappings[IdId];
                     SendMessageToClient("Territory: " + new Vector3I(terr.Center) + "\nOwner: " + terr.getOwnerName() + "\nDifficulty: " + terr.difficulty+"\nHealth: "+terr.health, id);
+                }
+            }
+
+            if (data[0] == 3)
+            {
+                ulong id = BitConverter.ToUInt64(data, 1);
+                if(MyAPIGateway.Session.IsUserAdmin(id))
+                {
+                    TerritoryManager.ClearTerritories();
+                    SendMessageToClient("All Territories have been cleared and new ones will appear", id);
+                }
+                else
+                {
+                    SendMessageToClient("You do not have access to that command", id);
                 }
             }
 

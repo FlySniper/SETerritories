@@ -21,16 +21,11 @@ namespace Territories
     {
         private ulong ttl = 0;
         public Territory terr;
-        public ulong TTL
-        {
-            get
-            {
-                return ttl;
-            }
-        }
+        public ulong TTL = 0;
+        public bool didAdd = false;
         public TrashList(ulong TTL, Territory territory)
         {
-            ttl = TTL;
+            this.TTL = TTL;
             terr = territory;
         }
     }
